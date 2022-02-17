@@ -12,7 +12,7 @@ import pickle
 import time
 import cv2
 import os
-
+import threading
 
 # construct the argument parser and parse the arguments
 ap = argparse.ArgumentParser()
@@ -48,7 +48,24 @@ print("[INFO] starting video stream...")
 vs = cv2.VideoCapture("videos/test/fake/fake2.mp4")
 time.sleep(2.0)
 
-target = 3
+label = "Warming up"
+def classify(classifier, face):
+	global label
+	preds = model.predict(face)[0][0]
+	# print(preds)
+	# import sys
+	# sys.exit()
+	# j = np.max(preds)
+	# label = le.classes_[j]
+	if preds > threshold :
+		label = 'real'
+
+	else:
+		label = 'fake'
+	label = "{}: {:.4f}".format(label, preds)
+	return label
+
+target = 2
 counter = 0
 
 # loop over the frames from the video stream
@@ -98,20 +115,12 @@ while True:
 
 				# pass the face ROI through the trained liveness detector
 				# model to determine if the face is "real" or "fake"
-				preds = model.predict(face)[0][0]
-				# print(preds)
-				# import sys
-				# sys.exit()
-				# j = np.max(preds)
-				# label = le.classes_[j]
-				if preds > threshold :
-					label = 'real'
 
-				else:
-					label = 'fake'
+				t1 = threading.Thread(target=classify, args=[model, face])
+				t1.start()
+				t1.join()
 
 				# draw the label and bounding box on the frame
-				label = "{}: {:.4f}".format(label, preds)
 				cv2.putText(frame, label, (startX, startY - 10),
 					cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
 				cv2.rectangle(frame, (startX, startY), (endX, endY),
